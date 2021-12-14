@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 from bs4 import BeautifulSoup
 import ssl
+import os
 from requests_html import AsyncHTMLSession
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -775,4 +776,4 @@ def remove_all_characters(word, char_to_remove):
     return result
 
 
-bot.run("YOUR_TOKEN")
+bot.run(os.environ["DISCORD_TOKEN"])
