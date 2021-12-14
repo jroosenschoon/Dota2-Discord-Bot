@@ -41,12 +41,12 @@ async def favorite_hero(ctx, *username):
     global ids
 
     username = " ".join(username)
-    try:
-        req = r.Request("https://api.opendota.com/api/players/" + str(ids[username]) + "/heroes", headers={'User-Agent': 'Mozilla/5.0'})
-        request = r.urlopen(req)
-    except KeyError:
-        await wrong_username(ctx)
-        return
+#     try:
+    req = r.Request("https://api.opendota.com/api/players/" + str(ids[username]) + "/heroes", headers={'User-Agent': 'Mozilla/5.0'})
+    request = r.urlopen(req)
+#     except KeyError:
+#         await wrong_username(ctx)
+#         return
 
 
     data = json.load(request)
