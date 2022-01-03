@@ -406,9 +406,11 @@ async def show_my_average(ctx, *username):
 
     try:
         data = r.html.find("div.sc-hIVACf + div", first=True).html
+        print("data", data)
     except AttributeError:
         try:
             data = r.html.find("div.sc-hIVACf + div", first=True).html
+            print("data", data)
         except AttributeError:
             await ctx.send("I am having technical issues. Please try again soon.")
             return
