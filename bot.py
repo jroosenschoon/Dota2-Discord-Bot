@@ -6,7 +6,6 @@ import discord
 from discord.ext import commands
 from bs4 import BeautifulSoup
 import ssl
-import os
 from requests_html import AsyncHTMLSession
 
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -24,7 +23,6 @@ async def on_ready():
         ids = json.load(f)
     print("Bot is running")
 
-
 @bot.command()
 async def current_users(ctx):
     """List the current users I know."""
@@ -34,19 +32,18 @@ async def current_users(ctx):
         msg += "\t" + user + "\n"
     await ctx.send("The usernames I know:\n" + msg)
 
-
 @bot.command()
 async def favorite_hero(ctx, *username):
     """List a user's most played hero and the win rate with that hero."""
     global ids
 
     username = " ".join(username)
-#     try:
-    req = r.Request("https://api.opendota.com/api/players/" + str(ids[username]) + "/heroes", headers={'User-Agent': 'Mozilla/5.0'})
-    request = r.urlopen(req)
-#     except KeyError:
-#         await wrong_username(ctx)
-#         return
+    try:
+        req = r.Request("https://api.opendota.com/api/players/" + str(ids[username]) + "/heroes", headers={'User-Agent': 'Mozilla/5.0'})
+        request = r.urlopen(req)
+    except KeyError:
+        await wrong_username(ctx)
+        return
 
 
     data = json.load(request)
@@ -71,7 +68,6 @@ async def favorite_hero(ctx, *username):
 
     await ctx.send("{} specializes in {} with a win rate of {:.2f}.".format(username, name, win_rate))
 
-
 @bot.command()
 async def mmr_check_id(ctx, user_id=0):
     """
@@ -86,7 +82,6 @@ async def mmr_check_id(ctx, user_id=0):
         await ctx.send("User's MMR: {}".format(data["mmr_estimate"]["estimate"]))
     else:
         await ctx.send("Please enter a username or id.")
-
 
 @bot.command()
 async def mmr_check_name(ctx, *username):
@@ -111,7 +106,6 @@ async def mmr_check_name(ctx, *username):
     else:
         await ctx.send("Please enter a username.")
 
-
 @bot.command()
 async def add(ctx, user_url, *username):
     """
@@ -128,7 +122,6 @@ async def add(ctx, user_url, *username):
         json.dump(ids, f)
 
     await ctx.send("{} with id {} was successfully added.".format(username, id))
-
 
 @bot.command()
 async def friends_this_week(ctx, *username):
@@ -167,7 +160,6 @@ async def friends_this_week(ctx, *username):
 
             await ctx.send(embed=embed)
 
-
 @bot.command()
 async def power_of_friendship(ctx, *username):
     """Get win rates with friends of the specified user."""
@@ -201,7 +193,6 @@ async def power_of_friendship(ctx, *username):
         msg += "{} Win rate: {:.1f}% ({}/{})\n".format(peer, info['win_rate'], info['win'], info["games"])
     await ctx.send(msg)
 
-
 @bot.command()
 async def get_time_played(ctx, *username):
     """Get the time played of a user."""
@@ -224,7 +215,6 @@ async def get_time_played(ctx, *username):
     time_played = b.find("article", {"class": "r-tabbed-table"}).table.tbody.tr.td.next_sibling.next_sibling.next_sibling.text
 
     await ctx.send(username +  " has played for " + time_played + ".")
-
 
 @bot.command()
 async def player_summary(ctx, *username):
@@ -314,7 +304,6 @@ async def player_summary(ctx, *username):
 
     await ctx.send(embed=embed)
 
-
 @bot.command()
 async def hero_impact(ctx, *username):
     """Get summary of player stats."""
@@ -347,7 +336,6 @@ async def hero_impact(ctx, *username):
         msg += "```{:<25}: KDA: {:<5} Kills: {:<5} Deaths: {:<7} Assists: {}\n```".format(row.td.next_sibling.text[:-10], row.td.next_sibling.next_sibling.text, kill_count, death_count, assist_count)
 
     await ctx.send(msg)
-
 
 @bot.command()
 async def least_impact(ctx, *username):
@@ -385,7 +373,6 @@ async def least_impact(ctx, *username):
 
     await ctx.send(msg)
 
-
 @bot.command()
 async def show_my_average(ctx, *username):
     """
@@ -395,96 +382,129 @@ async def show_my_average(ctx, *username):
     global ids
 
     username = " ".join(username)
-    asession = AsyncHTMLSession()
-# , headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+
     try:
-        r = await asession.get("https://www.opendota.com/players/" + str(ids[username]))
+        req = r.Request("https://api.opendota.com/api/players/" + str(ids[username]) + "/recentMatches", headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'})
     except KeyError:
         await wrong_username(ctx)
         return
-    await r.html.arender()  # this call executes the js in the page
 
-    try:
-        data = r.html.find("div.sc-hIVACf + div", first=True).html
-        print("data", data)
-    except AttributeError:
-        try:
-            data = r.html.find("div.sc-hIVACf + div", first=True).html
-            print("data", data)
-        except AttributeError:
-            await ctx.send("I am having technical issues. Please try again soon.")
-            return
+    request = r.urlopen(req)
 
-    b = BeautifulSoup(data, "html.parser")
+    data = request.read()
 
-    msg = "Averages over past 20 games (including turbo games):\n\tWin rate: "
+    max_kills = 0
+    max_deaths = 0
+    max_assists = 0
+    xp_per_min = 0
+    gold_per_min = 0
+    hero_damage	= 0
+    tower_damage = 0
+    hero_healing = 0
+    last_hits	= 0
 
-    msg += b.ul.li.p.text + "\n\tKills: "                      # Win rate
+    data = json.loads(data)
 
-    kill_str = str(b.ul.li.next_sibling.next_sibling)
-    kill_start = kill_str.index("<p style=\"color: rgb(102, 187, 106);\">") + len("<p style=\"color: rgb(102, 187, 106);\">")
-    kill_end = kill_str.index("<", kill_start)
+    print(data)
+    print(type(data))
+    for d in data:
+        if d['kills'] > max_kills:
+            max_kills = d['kills']
 
-    msg += kill_str[kill_start:kill_end] + "\n\tDeaths: "
+    print(max_kills)
 
-    death_str = str(b.ul.li.next_sibling.next_sibling.next_sibling)
-    death_start = death_str.index("<p style=\"color: rgb(255, 76, 76);\">") + len("<p style=\"color: rgb(255, 76, 76);\">")
-    death_end = death_str.index("<", death_start)
 
-    msg += death_str[death_start:death_end] + "\n\tAssists: "
 
-    assists_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling)
-    assists_start = assists_str.index("<p style=\"color: rgba(255, 255, 255, 0.6);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.6);\">")
-    assists_end = assists_str.index("<", assists_start)
+    # TODO: Future function idea: "Lane Role" Fetched from
+    # GET /players/{account_id}/counts
 
-    msg += assists_str[assists_start:assists_end] + "\n"
 
-    gold_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
-    gold_start = gold_str.index("<p style=\"color: rgb(201, 175, 29);\">") + len("<p style=\"color: rgb(201, 175, 29);\">")
-    gold_end = gold_str.index("<", gold_start)
 
-    msg += "\tGold/min: " + gold_str[gold_start:gold_end] + "\n"
-
-    xp_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
-    xp_start = xp_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
-    xp_end = xp_str.index("<", xp_start)
-
-    msg += "\tXP/min: " + xp_str[xp_start:xp_end]  + "\n"
-
-    hits_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
-    hits_start = hits_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
-    hits_end = hits_str.index("<", hits_start)
-
-    msg += "\tLast hits: " + hits_str[hits_start:hits_end] + "\n"
-
-    dmg_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
-    dmg_start = dmg_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
-    dmg_end = dmg_str.index("<", dmg_start)
-
-    msg += "\tHero damage: " + dmg_str[dmg_start:dmg_end] + "\n"
-
-    heal_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
-    heal_start = heal_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
-    heal_end = heal_str.index("<", heal_start)
-
-    msg += "\tHero healing: " + heal_str[heal_start:heal_end] + "\n"
-
-    tower_dmg_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
-    tower_dmg_start = tower_dmg_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
-    tower_dmg_end = tower_dmg_str.index("<", tower_dmg_start)
-
-    msg += "\tTower damage: " + tower_dmg_str[tower_dmg_start:tower_dmg_end] + "\n"
-
-    duration_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
-    duration_start = duration_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
-    duration_end = duration_str.index("<", duration_start)
-
-    msg += "\tDuration: " + duration_str[duration_start:duration_end] + "\n"
-
-    await ctx.send(msg)
-
-    # TODO Break up into show_average, show_max, show_character?
-
+#     asession = AsyncHTMLSession()
+# # , headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+#     try:
+#         r = await asession.get("https://www.opendota.com/players/" + str(ids[username]))
+#     except KeyError:
+#         await wrong_username(ctx)
+#         return
+#     await r.html.arender()  # this call executes the js in the page
+#
+#     try:
+#         data = r.html.find("div.sc-hIVACf + div", first=True).html
+#     except AttributeError:
+#         try:
+#             data = r.html.find("div.sc-hIVACf + div", first=True).html
+#         except AttributeError:
+#             await ctx.send("I am having technical issues. Please try again soon.")
+#             return
+#
+#     b = BeautifulSoup(data, "html.parser")
+#
+#     msg = "Averages over past 20 games (including turbo games):\n\tWin rate: "
+#
+#     msg += b.ul.li.p.text + "\n\tKills: "                      # Win rate
+#
+#     kill_str = str(b.ul.li.next_sibling.next_sibling)
+#     kill_start = kill_str.index("<p style=\"color: rgb(102, 187, 106);\">") + len("<p style=\"color: rgb(102, 187, 106);\">")
+#     kill_end = kill_str.index("<", kill_start)
+#
+#     msg += kill_str[kill_start:kill_end] + "\n\tDeaths: "
+#
+#     death_str = str(b.ul.li.next_sibling.next_sibling.next_sibling)
+#     death_start = death_str.index("<p style=\"color: rgb(255, 76, 76);\">") + len("<p style=\"color: rgb(255, 76, 76);\">")
+#     death_end = death_str.index("<", death_start)
+#
+#     msg += death_str[death_start:death_end] + "\n\tAssists: "
+#
+#     assists_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling)
+#     assists_start = assists_str.index("<p style=\"color: rgba(255, 255, 255, 0.6);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.6);\">")
+#     assists_end = assists_str.index("<", assists_start)
+#
+#     msg += assists_str[assists_start:assists_end] + "\n"
+#
+#     gold_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
+#     gold_start = gold_str.index("<p style=\"color: rgb(201, 175, 29);\">") + len("<p style=\"color: rgb(201, 175, 29);\">")
+#     gold_end = gold_str.index("<", gold_start)
+#
+#     msg += "\tGold/min: " + gold_str[gold_start:gold_end] + "\n"
+#
+#     xp_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
+#     xp_start = xp_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
+#     xp_end = xp_str.index("<", xp_start)
+#
+#     msg += "\tXP/min: " + xp_str[xp_start:xp_end]  + "\n"
+#
+#     hits_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
+#     hits_start = hits_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
+#     hits_end = hits_str.index("<", hits_start)
+#
+#     msg += "\tLast hits: " + hits_str[hits_start:hits_end] + "\n"
+#
+#     dmg_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
+#     dmg_start = dmg_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
+#     dmg_end = dmg_str.index("<", dmg_start)
+#
+#     msg += "\tHero damage: " + dmg_str[dmg_start:dmg_end] + "\n"
+#
+#     heal_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
+#     heal_start = heal_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
+#     heal_end = heal_str.index("<", heal_start)
+#
+#     msg += "\tHero healing: " + heal_str[heal_start:heal_end] + "\n"
+#
+#     tower_dmg_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
+#     tower_dmg_start = tower_dmg_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
+#     tower_dmg_end = tower_dmg_str.index("<", tower_dmg_start)
+#
+#     msg += "\tTower damage: " + tower_dmg_str[tower_dmg_start:tower_dmg_end] + "\n"
+#
+#     duration_str = str(b.ul.li.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling)
+#     duration_start = duration_str.index("<p style=\"color: rgba(255, 255, 255, 0.87);\">") + len("<p style=\"color: rgba(255, 255, 255, 0.87);\">")
+#     duration_end = duration_str.index("<", duration_start)
+#
+#     msg += "\tDuration: " + duration_str[duration_start:duration_end] + "\n"
+#
+#     await ctx.send(msg)
 
 @bot.command()
 async def show_my_max(ctx, *username):
@@ -598,7 +618,6 @@ async def show_my_max(ctx, *username):
     msg += duration_max + "\n"
 
     await ctx.send(msg)
-
 
 @bot.command()
 async def show_my_heroes(ctx, *username):
@@ -753,7 +772,6 @@ async def show_my_heroes(ctx, *username):
 
     await ctx.send(msg)
 
-
 async def wrong_username(ctx):
     global ids
     msg = "I do not know this username. The usernames I know are:\n"
@@ -765,10 +783,6 @@ async def wrong_username(ctx):
 
     await ctx.send(msg)
 
-
-
-
-
 def remove_all_characters(word, char_to_remove):
     """Remove."""
     result = ""
@@ -778,4 +792,4 @@ def remove_all_characters(word, char_to_remove):
     return result
 
 
-bot.run(os.environ["DISCORD_TOKEN"])
+bot.run("YOUR API KEY")
