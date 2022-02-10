@@ -775,4 +775,4 @@ def remove_all_characters(word, char_to_remove):
             result += char
     return result
 
-bot.run("DISCORD_TOKEN")
+bot.run(TOKEN)
