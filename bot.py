@@ -7,9 +7,11 @@ import discord
 from discord.ext import commands
 from bs4 import BeautifulSoup
 import ssl
+import os
 
 bot = commands.Bot(command_prefix=".")
 
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 @bot.event
 async def on_ready():
