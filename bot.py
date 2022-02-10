@@ -776,4 +776,4 @@ def remove_all_characters(word, char_to_remove):
             result += char
     return result
 
-bot.run("YOUR API KEY")
+bot.run("DISCORD_TOKEN")
