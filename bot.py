@@ -7,9 +7,6 @@ import discord
 from discord.ext import commands
 from bs4 import BeautifulSoup
 import ssl
-from requests_html import AsyncHTMLSession
-
-ssl._create_default_https_context = ssl._create_unverified_context
 
 bot = commands.Bot(command_prefix=".")
 
